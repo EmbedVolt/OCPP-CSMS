@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OCPP Test CSMS</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="bolt">ϟ</span><div><strong>OCPP Lab</strong><small>Test CSMS</small></div></div>
+    <nav>
+      <button class="nav active" data-page="dashboard">Dashboard</button>
+      <button class="nav" data-page="chargers">Chargers</button>
+      <button class="nav" data-page="configuration">Configuration</button>
+      <button class="nav" data-page="tests">Test Center</button>
+      <button class="nav" data-page="console">OCPP Console</button>
+      <button class="nav" data-page="messages">Messages</button>
+      <button class="nav" data-page="transactions">Transactions</button>
+      <button class="nav" data-page="responses">Response Rules</button>
+      <button class="nav" data-page="schemas">Schema Browser</button>
+    </nav>
+    <div class="sidebar-foot"><span id="healthDot" class="dot"></span><span id="healthText">Starting…</span></div>
+  </aside>
+
+  <main>
+    <header>
+      <div><h1 id="pageTitle">Dashboard</h1><p id="pageSubtitle">OCPP 1.6 / 2.0.1 / 2.1 charger testing console</p></div>
+      <button id="refreshBtn" class="secondary">Refresh</button>
+    </header>
+
+    <section id="page-dashboard" class="page active">
+      <div class="cards">
+        <article class="stat"><span>Connected</span><strong id="connectedCount">0</strong><small>charging stations</small></article>
+        <article class="stat"><span>Capacity</span><strong id="capacityCount">0 / 10</strong><small>test connections</small></article>
+        <article class="stat"><span>OCPP versions</span><strong>3</strong><small>1.6 · 2.0.1 · 2.1</small></article>
+        <article class="stat"><span>Messages</span><strong id="messageCount">0</strong><small>stored locally</small></article>
+      </div>
+      <div class="grid two">
+        <article class="panel"><div class="panel-head"><h2>Charging stations</h2><span>live</span></div><div id="dashboardStations"></div></article>
+        <article class="panel">
+          <div class="panel-head"><h2>Virtual charger</h2><span>test without hardware</span></div>
+          <div class="form-row"><label>Identity<input id="virtualIdentity" value="VIRTUAL-001" /></label><label>OCPP<select id="virtualVersion"><option>1.6</option><option>2.0.1</option><option>2.1</option></select></label></div>
+          <div class="actions"><button id="startVirtualBtn" class="primary">Start virtual charger</button><button id="stopVirtualBtn" class="secondary">Stop</button></div>
+          <div id="virtualList" class="mini-list"></div>
+          <h3>Real charger endpoint</h3>
+          <div class="connection-box"><code>ws://YOUR-PC:9000/ocpp/&lt;STATION_ID&gt;</code></div>
+          <p class="muted">Subprotocol: <code>ocpp1.6</code>, <code>ocpp2.0.1</code>, or <code>ocpp2.1</code>.</p>
+        </article>
+      </div>
+      <article class="panel"><div class="panel-head"><h2>Recent protocol traffic</h2><button class="link-btn" data-goto="messages">Open log</button></div><div id="recentMessages"></div></article>
+    </section>
+
+    <section id="page-chargers" class="page">
+      <article class="panel"><div class="panel-head"><h2>Charging stations</h2><span id="chargerCountLabel"></span></div><div id="chargersTable"></div></article>
+    </section>
+
+    <section id="page-configuration" class="page">
+      <article class="panel">
+        <div class="panel-head"><h2>Charger configuration</h2><span id="configProtocolBadge">select a charger</span></div>
+        <label>Charging station<select id="configStation"></select></label>
+        <p class="muted">OCPP 1.6 uses <code>GetConfiguration / ChangeConfiguration</code>. OCPP 2.0.1 and 2.1 use <code>GetVariables / SetVariables</code>.</p>
+      </article>
+
+      <div id="config16Panel" class="grid two hidden">
+        <article class="panel">
+          <div class="panel-head"><h2>OCPP 1.6 Configuration</h2><span>read</span></div>
+          <label>Keys (optional, comma separated)<input id="config16Keys" placeholder="HeartbeatInterval, MeterValueSampleInterval" /></label>
+          <div class="actions"><button id="config16ReadBtn" class="primary">Read configuration</button></div>
+          <div id="config16Table" class="config-table"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Change value</h2><span>write</span></div>
+          <label>Key<input id="config16Key" list="config16Common" placeholder="HeartbeatInterval" /></label>
+          <datalist id="config16Common"><option>HeartbeatInterval</option><option>MeterValueSampleInterval</option><option>ClockAlignedDataInterval</option><option>ConnectionTimeOut</option><option>LocalAuthorizeOffline</option><option>LocalPreAuthorize</option><option>StopTransactionOnEVSideDisconnect</option><option>UnlockConnectorOnEVSideDisconnect</option></datalist>
+          <label>Value<input id="config16Value" placeholder="60" /></label>
+          <div class="actions"><button id="config16WriteBtn" class="primary">Change configuration</button></div>
+          <pre id="config16Result">No change sent.</pre>
+        </article>
+      </div>
+
+      <div id="config2Panel" class="grid two hidden">
+        <article class="panel">
+          <div class="panel-head"><h2>Device Model variable</h2><span>GetVariables</span></div>
+          <label>Preset<select id="config2Preset"><option value="custom">Custom</option><option value="OCPPCommCtrlr|HeartbeatInterval">OCPPCommCtrlr / HeartbeatInterval</option><option value="SampledDataCtrlr|TxUpdatedInterval">SampledDataCtrlr / TxUpdatedInterval</option><option value="SampledDataCtrlr|AlignedDataInterval">SampledDataCtrlr / AlignedDataInterval</option><option value="AuthCtrlr|Enabled">AuthCtrlr / Enabled</option></select></label>
+          <div class="form-row"><label>Component<input id="config2Component" value="OCPPCommCtrlr" /></label><label>Component instance<input id="config2ComponentInstance" placeholder="optional" /></label></div>
+          <div class="form-row"><label>Variable<input id="config2Variable" value="HeartbeatInterval" /></label><label>Variable instance<input id="config2VariableInstance" placeholder="optional" /></label></div>
+          <label>Attribute type<select id="config2Attribute"><option>Actual</option><option>Target</option><option>MinSet</option><option>MaxSet</option></select></label>
+          <div class="actions"><button id="config2ReadBtn" class="primary">Read variable</button></div>
+          <pre id="config2ReadResult">No variable read yet.</pre>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Set variable</h2><span>SetVariables</span></div>
+          <label>New value<input id="config2Value" placeholder="60" /></label>
+          <div class="actions"><button id="config2WriteBtn" class="primary">Set variable</button></div>
+          <pre id="config2WriteResult">No change sent.</pre>
+          <p class="muted">Component/Variable support depends on the charger device model. An OCPP-compliant charger can return UnknownComponent or UnknownVariable.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="page-tests" class="page">
+      <article class="panel">
+        <div class="panel-head"><h2>OCPP Test Center</h2><span>action-level functional tests</span></div>
+        <div class="test-controls">
+          <label>Charging station<select id="testStation"></select></label>
+          <label>Filter<input id="testFilter" placeholder="GetVariables, firmware, transaction…" /></label>
+          <label>Timeout (s)<input id="testTimeout" type="number" min="1" max="120" value="8" /></label>
+        </div>
+        <div class="toolbar">
+          <button id="selectSafeBtn" class="secondary">Select safe queries</button>
+          <button id="selectAllBtn" class="secondary">Select all</button>
+          <button id="clearTestsBtn" class="secondary">Clear</button>
+          <label class="checkbox inline"><input id="includeRiskyTests" type="checkbox" /> Enable state-changing tests</label>
+          <button id="runTestsBtn" class="primary">Run selected tests</button>
+          <button id="schemaSelfTestBtn" class="secondary">Validate all protocol schemas</button>
+        </div>
+        <div id="testSummary" class="test-summary">Select a charger.</div>
+      </article>
+
+      <div class="grid test-grid">
+        <article class="panel">
+          <div class="panel-head"><h2>Test cases</h2><span id="testCaseCount">0</span></div>
+          <div id="testCasesTable"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Selected test payload</h2><span id="testPayloadAction">none</span></div>
+          <textarea id="testPayloadEditor" spellcheck="false">{}</textarea>
+          <div class="actions"><button id="resetTestPayloadBtn" class="secondary">Reset template</button><button id="saveTestPayloadBtn" class="primary">Use edited payload</button></div>
+          <p class="muted">Click Edit beside a test case. Payload overrides are used only for the current browser session.</p>
+        </article>
+      </div>
+
+      <article class="panel"><div class="panel-head"><h2>Latest results</h2><span id="testRunLabel"></span></div><div id="testResultsTable"></div></article>
+      <article class="panel"><div class="panel-head"><h2>Test history</h2><button id="refreshHistoryBtn" class="link-btn">Refresh</button></div><div id="testHistoryTable"></div></article>
+    </section>
+
+    <section id="page-console" class="page">
+      <div class="grid console-grid">
+        <article class="panel">
+          <div class="panel-head"><h2>Send OCPP CALL</h2><span>schema validated</span></div>
+          <label>Charging station<select id="consoleStation"></select></label>
+          <label>Action<select id="consoleAction"></select></label>
+          <div id="actionDirection" class="pill"></div>
+          <label>Payload<textarea id="payloadEditor" spellcheck="false"></textarea></label>
+          <label class="checkbox"><input id="validatePayload" type="checkbox" checked /> Validate payload against schema before sending</label>
+          <div class="actions"><button id="loadTemplateBtn" class="secondary">Load template</button><button id="sendCommandBtn" class="primary">Send command</button></div>
+        </article>
+        <article class="panel result-panel"><div class="panel-head"><h2>Response</h2></div><pre id="commandResult">Select a connected station.</pre></article>
+      </div>
+    </section>
+
+    <section id="page-messages" class="page">
+      <article class="panel">
+        <div class="toolbar"><select id="messageStationFilter"><option value="">All stations</option></select><input id="messageActionFilter" placeholder="Filter action"/><select id="messageLimit"><option>100</option><option selected>200</option><option>500</option><option>1000</option></select></div>
+        <div id="messagesTable"></div>
+      </article>
+    </section>
+
+    <section id="page-transactions" class="page"><article class="panel"><div class="panel-head"><h2>Transactions</h2></div><div id="transactionsTable"></div></article></section>
+
+    <section id="page-responses" class="page">
+      <div class="grid schema-grid">
+        <article class="panel">
+          <div class="panel-head"><h2>Automatic CALLRESULT</h2><span>station → CSMS</span></div>
+          <label>Protocol<select id="responseVersion"><option>1.6</option><option>2.0.1</option><option>2.1</option></select></label>
+          <label>Action<select id="responseAction"></select></label>
+          <label>Response payload<textarea id="responseEditor" spellcheck="false"></textarea></label>
+          <div class="actions"><button id="defaultResponseBtn" class="secondary">Load default</button><button id="deleteResponseBtn" class="secondary">Remove override</button><button id="saveResponseBtn" class="primary">Save override</button></div>
+        </article>
+        <article class="panel"><div class="panel-head"><h2>Saved overrides</h2></div><div id="responseRulesTable"></div></article>
+      </div>
+    </section>
+
+    <section id="page-schemas" class="page">
+      <div class="grid schema-grid">
+        <article class="panel"><label>Protocol<select id="schemaVersion"><option>1.6</option><option>2.0.1</option><option>2.1</option></select></label><label>Action<select id="schemaAction"></select></label><label>Document<select id="schemaType"><option value="request">Request</option><option value="response">Response</option></select></label><button id="loadSchemaBtn" class="primary">Load schema</button></article>
+        <article class="panel"><pre id="schemaViewer">Select an action.</pre></article>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

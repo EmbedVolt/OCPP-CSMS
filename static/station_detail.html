@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Charge Point · OCPP Lab</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/station_detail.css" />
+</head>
+<body class="detail-body">
+  <aside class="sidebar detail-sidebar">
+    <div class="brand"><span class="bolt">ϟ</span><div><strong>OCPP Lab</strong><small>Charge Point Portal</small></div></div>
+    <nav>
+      <a class="detail-nav active" href="#dashboard">Dashboard</a>
+      <a class="detail-nav" href="#realtime">Real-Time</a>
+      <a class="detail-nav" href="#configuration">Configuration</a>
+      <a class="detail-nav" href="#communication">Communication</a>
+      <a class="detail-nav" href="#transactions">Transactions</a>
+      <a class="detail-nav" href="#tests">Tests</a>
+      <a class="detail-nav" href="#diagnostics">Diagnostics / Firmware</a>
+      <a class="detail-nav" href="#station-data">Station Data</a>
+      <a class="detail-nav" href="/">← All chargers</a>
+    </nav>
+    <div class="sidebar-foot"><span id="healthDot" class="dot"></span><span id="healthText">Loading…</span></div>
+  </aside>
+
+  <main class="detail-main">
+    <header class="detail-header">
+      <div>
+        <div class="crumb"><a href="/">Charge Points</a><span>/</span><span id="crumbIdentity">…</span></div>
+        <div class="title-row"><h1 id="stationIdentity">Charge point</h1><span id="stationState" class="status offline">Offline</span><span id="protocolBadge" class="badge">OCPP</span></div>
+        <p id="stationSubtitle">Loading station information…</p>
+      </div>
+      <div class="header-actions"><button id="refreshNow" class="secondary">Refresh</button><button id="disconnectBtn" class="danger-btn">Disconnect</button></div>
+    </header>
+
+    <div class="station-tabs" id="stationTabs" role="tablist" aria-label="Charge point sections">
+      <button class="station-tab active" data-tab="dashboard" role="tab">Dashboard</button>
+      <button class="station-tab" data-tab="realtime" role="tab">Real-Time Controls</button>
+      <button class="station-tab" data-tab="configuration" role="tab">Configuration</button>
+      <button class="station-tab" data-tab="communication" role="tab">Communication Log</button>
+      <button class="station-tab" data-tab="transactions" role="tab">Transactions</button>
+      <button class="station-tab" data-tab="tests" role="tab">Test Center</button>
+      <button class="station-tab" data-tab="diagnostics" role="tab">Diagnostics / Firmware</button>
+      <button class="station-tab" data-tab="station-data" role="tab">Station Data</button>
+    </div>
+
+    <section id="dashboard" class="page-section tab-section active">
+      <div class="cards detail-cards">
+        <article class="stat"><span>Connection</span><strong id="connectionValue">—</strong><small id="connectionMeta">—</small></article>
+        <article class="stat"><span>Delivered</span><strong id="deliveredEnergy">0 kWh</strong><small>lab estimate from stored meter registers</small></article>
+        <article class="stat"><span>Transactions</span><strong id="transactionCount">0</strong><small id="transactionMeta">0 active</small></article>
+        <article class="stat"><span>Last message</span><strong id="lastAction">—</strong><small id="lastActionTime">No OCPP traffic yet</small></article>
+      </div>
+
+      <div class="dashboard-grid">
+        <article class="panel chart-panel">
+          <div class="panel-head"><div><h2>Electric current / power</h2><p class="section-note">Derived from MeterValues / TransactionEvent sampled values.</p></div><div class="head-controls"><select id="chartMetric"><option value="current_a">Current (A)</option><option value="power_kw">Power (kW)</option><option value="energy_kwh">Energy (kWh)</option></select><select id="chartWindow"><option value="3">Last 3 hours</option><option value="24" selected>Last 24 hours</option><option value="72">Last 3 days</option><option value="168">Last 7 days</option></select></div></div>
+          <div id="meterChart" class="meter-chart"><div class="empty">No meter samples received yet.</div></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Occupancy / status</h2><div class="head-controls"><span id="statusSampleCount">0 events</span><select id="statusWindow"><option value="0">All stored</option><option value="24" selected>Last 24 hours</option><option value="72">Last 3 days</option><option value="168">Last 7 days</option><option value="720">Last 30 days</option></select></div></div>
+          <div id="occupancyChart" class="status-bars"><div class="empty">No status history yet.</div></div>
+        </article>
+      </div>
+
+      <div class="detail-grid">
+        <article class="panel">
+          <div class="panel-head"><h2>Connectors / EVSE</h2><span>live status</span></div>
+          <div id="connectorCards" class="connector-grid"><div class="empty">No StatusNotification yet.</div></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Station information</h2><span id="bootReason">—</span></div>
+          <dl class="info-list">
+            <div><dt>Identity</dt><dd id="infoIdentity">—</dd></div>
+            <div><dt>Vendor</dt><dd id="infoVendor">—</dd></div>
+            <div><dt>Model</dt><dd id="infoModel">—</dd></div>
+            <div><dt>Firmware</dt><dd id="infoFirmware">—</dd></div>
+            <div><dt>OCPP</dt><dd id="infoProtocol">—</dd></div>
+            <div><dt>Remote address</dt><dd id="infoRemote">—</dd></div>
+            <div><dt>Connected at</dt><dd id="infoConnectedAt">—</dd></div>
+            <div><dt>Last seen</dt><dd id="infoLastSeen">—</dd></div>
+          </dl>
+        </article>
+      </div>
+
+      <article class="panel access-panel">
+        <div class="panel-head"><div><h2>Test card access / Authorize behavior</h2><p class="section-note">Configure the automatic Authorize response used by this test CSMS.</p></div><span id="authorizeRuleState">Default</span></div>
+        <div class="access-controls"><label>Authorization result<select id="authorizeStatus"><option value="Default">Default CSMS response</option><option>Accepted</option><option>Blocked</option><option>Expired</option><option>Invalid</option><option>ConcurrentTx</option></select></label><label>ID Token / RFID<input id="authorizeToken" value="TEST-TAG-001" /></label><button id="saveAuthorizeRule" class="primary">Apply behavior</button><button id="simulateAuthorize" class="secondary">Simulate Authorize (virtual)</button></div>
+        <pre id="authorizeResult" class="compact-pre">No authorization test yet.</pre>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h2>Most recent transactions</h2><a href="#transactions" class="tab-link" data-tab="transactions">Open full list</a></div>
+        <div id="recentTransactionsTable"></div>
+      </article>
+    </section>
+
+    <section id="realtime" class="panel page-section tab-section command-panel">
+      <div class="panel-head"><div><h2>Real-Time Dashboard</h2><p class="section-note">Commands are mapped to the active OCPP protocol. Complex payloads open in an editable confirmation dialog.</p></div><span id="commandConnectionHint">station offline</span></div>
+      <div class="command-grid" id="coreCommands">
+        <button class="command-card" data-command="softReset"><span class="command-icon">↻</span><strong>Soft reset</strong><small>Reset / OnIdle</small></button>
+        <button class="command-card danger-outline" data-command="hardReset"><span class="command-icon">⟳</span><strong>Hard reset</strong><small>Immediate reset</small></button>
+        <button class="command-card warn-outline" data-command="block"><span class="command-icon">⊘</span><strong>Block</strong><small>Set unavailable</small></button>
+        <button class="command-card" data-command="unblock"><span class="command-icon">✓</span><strong>Unblock</strong><small>Set operative</small></button>
+        <button class="command-card" data-command="unlock"><span class="command-icon">⌑</span><strong>Unlock connector</strong><small>Release cable lock</small></button>
+        <button class="command-card" data-command="start"><span class="command-icon">▶</span><strong>Start transaction</strong><small>Remote start</small></button>
+        <button class="command-card warn-outline" data-command="stop"><span class="command-icon">■</span><strong>Stop transaction</strong><small>Remote stop</small></button>
+        <button class="command-card" data-command="status"><span class="command-icon">⌁</span><strong>Retrieve status</strong><small>Trigger StatusNotification</small></button>
+        <button class="command-card" id="getParametersShortcut"><span class="command-icon">⚙</span><strong>Get parameters</strong><small>Open Configuration and read from charger</small></button>
+        <button class="command-card" data-action="ClearCache" data-label="Clear cards cache"><span class="command-icon">⌫</span><strong>Clear cards cache</strong><small>ClearCache</small></button>
+        <button class="command-card" data-special="diagnostics"><span class="command-icon">▤</span><strong>Get diagnostics</strong><small>GetDiagnostics / GetLog</small></button>
+        <button class="command-card" data-action="SendLocalList" data-label="Send local list"><span class="command-icon">▦</span><strong>Send local list</strong><small>Editable list payload</small></button>
+        <button class="command-card" data-special="clearLocalList"><span class="command-icon">⌦</span><strong>Clear local list</strong><small>Send empty Full list</small></button>
+        <button class="command-card danger-outline" data-action="UpdateFirmware" data-label="Update firmware"><span class="command-icon">⇧</span><strong>Update firmware</strong><small>Editable firmware URL</small></button>
+        <button class="command-card warn-outline" data-action="SetChargingProfile" data-label="Set charging profile"><span class="command-icon">⌁</span><strong>Set charging profiles</strong><small>Smart charging payload</small></button>
+        <button class="command-card" data-action="ClearChargingProfile" data-label="Clear charging profile"><span class="command-icon">⌫</span><strong>Clear charging profiles</strong><small>ClearChargingProfile</small></button>
+        <button class="command-card" data-action="DataTransfer" data-label="Data transfer"><span class="command-icon">⇄</span><strong>Data transfer</strong><small>Vendor-specific payload</small></button>
+        <button class="command-card" data-action="TriggerMessage" data-label="Trigger message"><span class="command-icon">⚡</span><strong>TriggerMessage</strong><small>Request charger message</small></button>
+        <button class="command-card" id="clearCommLog"><span class="command-icon">⌫</span><strong>Clear communication history</strong><small>Local CSMS log only</small></button>
+        <button class="command-card danger-outline" id="disconnectClear"><span class="command-icon">!</span><strong>Disconnect transactions / clear log</strong><small>Lab maintenance action</small></button>
+      </div>
+      <div class="command-options">
+        <label>Connector ID<input id="connectorId" type="number" min="0" value="1" /></label>
+        <label>EVSE ID <span class="label-help">2.x</span><input id="evseId" type="number" min="0" value="1" /></label>
+        <label>ID Token / RFID<input id="idToken" value="TEST-TAG-001" /></label>
+        <label>Transaction ID<input id="transactionId" placeholder="select from transaction list" /></label>
+      </div>
+      <div id="commandResult" class="command-result muted">No remote action sent.</div>
+    </section>
+
+    <section id="configuration" class="panel page-section tab-section">
+      <div class="panel-head"><div><h2>Configuration / Parameters</h2><p class="section-note" id="configurationHelp">Read and change charger configuration.</p></div><button id="loadConfiguration" class="secondary">Get parameters</button></div>
+      <div id="config16" class="hidden">
+        <div class="filter-row"><input id="configFilter" placeholder="Filter configuration keys…" /></div>
+        <div id="config16Table"></div>
+        <div class="config-edit-row"><label>Key<input id="config16Key" placeholder="HeartbeatInterval" /></label><label>Value<input id="config16Value" placeholder="60" /></label><button id="setConfig16" class="primary">Change</button></div>
+      </div>
+      <div id="config2" class="hidden">
+        <div class="config-edit-row config2-row"><label>Component<input id="componentName" value="OCPPCommCtrlr" /></label><label>Variable<input id="variableName" value="HeartbeatInterval" /></label><label>Value<input id="variableValue" placeholder="60" /></label><button id="getVariable" class="secondary">Get</button><button id="setVariable" class="primary">Set</button></div>
+        <pre id="variableResult" class="compact-pre">No variable operation yet.</pre>
+        <div class="command-row"><button class="secondary template-command" data-action="GetBaseReport">Get base report</button><button class="secondary template-command" data-action="GetReport">Get report</button></div>
+      </div>
+    </section>
+
+    <section id="communication" class="panel page-section tab-section">
+      <div class="panel-head"><div><h2>Communication Log</h2><p class="section-note">Raw OCPP CALL / CALLRESULT / CALLERROR history.</p></div><div class="live-indicator"><span class="pulse"></span> auto refresh</div></div>
+      <div class="filters">
+        <select id="trafficDirection"><option value="">All directions</option><option>Station → CSMS</option><option>CSMS → Station</option></select>
+        <select id="trafficType"><option value="">All message types</option><option>CALL</option><option>CALLRESULT</option><option>CALLERROR</option></select>
+        <input id="trafficAction" placeholder="Filter action…" />
+        <button id="applyTrafficFilter" class="secondary">Apply</button>
+      </div>
+      <div id="trafficTable"></div>
+    </section>
+
+    <section id="transactions" class="panel page-section tab-section">
+      <div class="panel-head"><h2>Transactions</h2><span id="transactionCountLabel">0 stored</span></div>
+      <div id="transactionsTable"></div>
+    </section>
+
+    <section id="tests" class="panel page-section tab-section">
+      <div class="panel-head"><div><h2>Test Center</h2><p class="section-note">Run schema-validated OCPP tests against the connected charger.</p></div><span id="testProtocol">—</span></div>
+      <div class="test-toolbar">
+        <button id="runSafeTests" class="primary">Run safe suite</button>
+        <button id="runFullTests" class="danger-btn">Run full suite</button>
+        <button id="runSchemaTests" class="secondary">Schema self-test</button>
+      </div>
+      <div id="testSummary" class="test-summary muted">No test run yet.</div>
+      <div id="testCases"></div>
+      <div id="testResults"></div>
+    </section>
+
+    <section id="diagnostics" class="panel page-section tab-section">
+      <div class="panel-head"><div><h2>Diagnostics / Firmware / Security</h2><p class="section-note">Protocol-specific tools plus recent status notifications.</p></div><span id="diagnosticProtocol">—</span></div>
+      <div class="command-row wrap" id="diagnosticCommands">
+        <button class="secondary" data-special="diagnostics">Get diagnostics / log</button>
+        <button class="secondary template-command" data-action="UpdateFirmware">Update firmware</button>
+        <button class="secondary template-command" data-action="GetInstalledCertificateIds">Installed certificates</button>
+        <button class="secondary template-command" data-action="InstallCertificate">Install certificate</button>
+        <button class="secondary template-command" data-action="DeleteCertificate">Delete certificate</button>
+        <button class="secondary template-command" data-action="SignCertificate">Sign certificate</button>
+        <button class="secondary template-command" data-action="GetCertificateStatus">Certificate status</button>
+      </div>
+      <h3>Recent charger events</h3>
+      <div id="eventLog"></div>
+    </section>
+
+    <section id="station-data" class="panel page-section tab-section">
+      <div class="panel-head"><div><h2>Station Data</h2><p class="section-note">Local CSMS metadata. Secrets are intentionally not stored or rendered here.</p></div><button id="saveStationData" class="primary">Save</button></div>
+      <div class="station-form">
+        <label>Friendly name<input id="friendlyName" maxlength="100" /></label>
+        <label>Reference<input id="stationReference" maxlength="100" /></label>
+        <label>Physical ID<input id="physicalId" maxlength="100" /></label>
+        <label>OCPP identity<input id="ocppIdentity" readonly /></label>
+        <label>Protocol<input id="stationProtocol" readonly /></label>
+        <label>Security profile<select id="securityProfile"><option>None</option><option>Basic authentication over WS</option><option>No authentication over WSS</option><option>Basic authentication over WSS</option><option>Client certificate over WSS</option></select></label>
+        <label>Allowed IP / CIDR<input id="allowedIp" placeholder="192.168.1.0/24" /></label>
+        <label>Location<input id="locationName" /></label>
+        <label>Latitude<input id="latitude" type="number" step="0.000001" /></label>
+        <label>Longitude<input id="longitude" type="number" step="0.000001" /></label>
+        <label>Remote access URL<input id="remoteAccessUrl" placeholder="http://host/admin" /></label>
+        <label class="checkbox-label"><input id="remoteAccessEnabled" type="checkbox" /> Enable remote access metadata</label>
+        <label class="checkbox-label"><input id="debugLogging" type="checkbox" /> Debug communication logging marker</label>
+        <label class="wide">Notes<textarea id="stationNotes" rows="4"></textarea></label>
+      </div>
+    </section>
+  </main>
+
+  <div id="confirmModal" class="modal hidden">
+    <div class="modal-card">
+      <h2 id="modalTitle">Confirm command</h2>
+      <p id="modalText"></p>
+      <label class="modal-label">OCPP action<input id="modalAction" readonly /></label>
+      <label class="modal-label">Request payload<textarea id="modalPayload" class="json-editor" rows="14"></textarea></label>
+      <div class="actions"><button id="modalCancel" class="secondary">Cancel</button><button id="modalSend" class="primary">Send command</button></div>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <script src="/static/station_detail.js"></script>
+</body>
+</html>

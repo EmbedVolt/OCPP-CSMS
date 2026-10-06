@@ -1,0 +1,13 @@
+services:
+  csms:
+    build: .
+    ports:
+      - "${CSMS_PUBLIC_PORT:-9001}:9000"
+    environment:
+      CSMS_HOST: 0.0.0.0
+      CSMS_PORT: 9000
+      CSMS_MAX_STATIONS: 10
+      CSMS_DB_PATH: /app/data/csms.sqlite3
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
